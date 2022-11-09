@@ -1,8 +1,8 @@
 {
-  "name": "aws-docker-templates-express",
+  "name": "express_app",
   "version": "1.0.0",
-  "description": "Node.js + express on Docker",
-  "author": "tinystacks - about@tinystacks.com",
+  "description": "Student example derived from bigger project",
+  "author": "Maximus Pileus",
   "main": "server.js",
   "scripts": {
     "start": "node built/server.js",
