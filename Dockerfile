@@ -1,6 +1,4 @@
-FROM public.ecr.aws/bitnami/node:15
-COPY --from=public.ecr.aws/tinystacks/secret-env-vars-wrapper:latest-x86 /opt /opt
-COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.3.2-x86_64 /lambda-adapter /opt/extensions/lambda-adapter
+FROM node:15-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -10,12 +8,15 @@ WORKDIR /usr/src/app
 # where available (npm@5+)
 COPY package*.json ./
 COPY tsconfig.json ./
+# Copy everything inside src folder
 COPY src ./src
+#Install all of the application’s dependencies
 RUN npm install
+#Builds the project inside the image
 RUN npm run build
 
-# Bundle app source
+# Bundle app source (Then we just copy the rest, which concludes our build)
 COPY . .
 
 EXPOSE 8000
-CMD [ "/opt/tinystacks-secret-env-vars-wrapper", "node", "built/server.js" ]
+CMD [ "node", "built/server.js" ]
