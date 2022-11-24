@@ -15,6 +15,8 @@ RUN npm install
 #Builds the project inside the image
 RUN npm run build
 
+COPY built ./doc
+
 # Bundle app source (Then we just copy the rest, which concludes our build)
 COPY . .
 
