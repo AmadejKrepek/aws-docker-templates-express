@@ -16,6 +16,8 @@ app.get("/", (req:any, res:any) => {
   res.status(200).send("hello world!");
 });
 
+app.use('/doc', express.static(__dirname + '/doc'))
+
 app.get("/ping", (req:any, res:any) => {
   res.status(200).send("pong");
 });
@@ -33,6 +35,7 @@ app.get('/weather-record', parser, getWeatherRecord)
 app.post('/weather-record', parser, createWeatherRecord)
 app.put('/weather-record/:id', parser, updateWeatherRecord)
 app.delete('/weather-record/:id', parser, deleteWeatherRecord)
+
 
 app.listen(PORT, HOST);
 console.log(`Running on http://${HOST}:${PORT}`);

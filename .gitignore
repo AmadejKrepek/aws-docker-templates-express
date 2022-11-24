@@ -1,3 +1,4 @@
 node_modules/
 built/
 docker-compose.yml
+src/doc

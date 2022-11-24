@@ -10,6 +10,14 @@ import { pool } from '../config/postgres';
  * 
  * @param req.params.id 
  * @returns an array of Items or a single Item
+ * 
+ * @api {get} weather-record/:id Weather record by id
+ * @apiName GetWeatherRecords
+ * @apiGroup WeatherRecord
+ * 
+ * @apiParam {Number} id Weather Record Id
+ * 
+ * @apiSuccess {String} queryResult Id of
  */
 export async function getWeatherRecord(req: Request, res: Response) {
   addHeadersToResponse(res);
