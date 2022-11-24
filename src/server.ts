@@ -1,6 +1,9 @@
 import * as express from "express";
 import { json } from "body-parser";
 
+import { connectToDatabase } from "./config/mongodb"
+import { ordersRouter } from "./routes/orders.router";
+
 import { createWeatherRecord, deleteWeatherRecord, getWeatherRecord, updateWeatherRecord } from "./routes/weather-record";
 
 
@@ -12,21 +15,21 @@ const HOST = '0.0.0.0';
 const app = express();
 const parser = json();
 
-app.get("/", (req:any, res:any) => {
+app.get("/", (req: any, res: any) => {
   res.status(200).send("hello world!");
 });
 
 app.use('/doc', express.static(__dirname + '/doc'))
 
-app.get("/ping", (req:any, res:any) => {
+app.get("/ping", (req: any, res: any) => {
   res.status(200).send("pong");
 });
 
-app.get("/healthy", (req:any, res:any) => {
+app.get("/healthy", (req: any, res: any) => {
   res.status(200).send("healthy");
 });
 
-app.get("/env-var", (req:any, res:any) => {
+app.get("/env-var", (req: any, res: any) => {
   res.status(200).send(process.env.TEST_ENV_VAR);
 });
 
@@ -36,6 +39,14 @@ app.post('/weather-record', parser, createWeatherRecord)
 app.put('/weather-record/:id', parser, updateWeatherRecord)
 app.delete('/weather-record/:id', parser, deleteWeatherRecord)
 
+connectToDatabase()
+  .then(() => {
+    app.use("/orders", ordersRouter);
+  })
+  .catch((error: Error) => {
+    console.error("Database connection failed", error);
+    process.exit();
+  });
 
 app.listen(PORT, HOST);
 console.log(`Running on http://${HOST}:${PORT}`);
