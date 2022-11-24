@@ -1,7 +1,7 @@
 import * as express from "express";
 import { json } from "body-parser";
 
-import { createWeatherRecord, deleteWeatherRecord, getWeatherRecord, updateWeatherRecord } from "./weather-record";
+import { createWeatherRecord, deleteWeatherRecord, getWeatherRecord, updateWeatherRecord } from "./routes/weather-record";
 
 
 // Constants

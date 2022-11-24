@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { addHeadersToResponse } from './server-helpers';
-import { pool } from './config/postgres';
+import { addHeadersToResponse } from '../server-helpers';
+import { pool } from '../config/postgres';
 
 /**
  * Get All Weather Records or a single weather record
