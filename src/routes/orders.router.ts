@@ -11,7 +11,7 @@ export const ordersRouter = express.Router();
 ordersRouter.use(express.json());
 
 /**
- * @api {get} order/ Get all orders
+ * @api {get} orders Get all orders
  * @apiName GetOrders
  * @apiGroup Order
  * 
@@ -29,24 +29,26 @@ ordersRouter.get("/", async (_req: Request, res: Response) => {
 });
 
 /**
- * @api {get} order/:id/ Get order by id
- * @apiName GetOrder
+ * @api {get} orders/:id/ Get order by id
+ * @apiName GetOrdersById
  * @apiGroup Order
  * 
- * @apiParam {Number} id Order uniqueID
+ * @apiParam {String} id Order uniqueID
  * 
- * @apiSuccess {String} order Order Class
+ * @apiSuccess {String} orders Order by id
  */
 ordersRouter.get("/:id", async (req: Request, res: Response) => {
     const id = req?.params?.id;
 
     try {
-
         const query = { _id: new ObjectId(id) };
         const order = (await collections.orders.findOne(query)) as any;
 
         if (order) {
             res.status(200).send(order);
+        }
+        else {
+            res.status(404).send(`Unable to find order with id: ${req.params.id}`)
         }
     } catch (error) {
         res.status(404).send(`Unable to find matching document with id: ${req.params.id}`);
@@ -54,11 +56,11 @@ ordersRouter.get("/:id", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {get} order/:from/:to Get order from/to
- * @apiName GetOrderTime
+ * @api {get} orders/:from/:to Get order by date
+ * @apiName GetOrdersWithDate
  * @apiGroup Order
  * 
- * @apiParam {String} from, to fromDate
+ * @apiParam {String} from fromDate
  * @apiParam {String} to toDate
  * 
  * @apiSuccess {String} orders Array of orders
@@ -68,10 +70,9 @@ ordersRouter.get("/:from/:to", async (req: Request, res: Response) => {
     const to = req?.params?.to;
 
     try {
-
         const query = {
-            from: from,
-            to: to
+            from: new Date(from),
+            to: new Date(to)
         };
         const orders = (await collections.orders.find(query).toArray()) as any;
 
@@ -82,44 +83,46 @@ ordersRouter.get("/:from/:to", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {get} order/latest Get latest order
- * @apiName GetOrderLatest
+ * @api {get} orders/custom/from/:to Get order with custom
+ * @apiName GetOrdersWithCustomDate
  * @apiGroup Order
  * 
- * @apiSuccess {String} order Order object
+ * @apiParam {String} to toDate
+ * 
+ * @apiSuccess {String} orders Array of orders
  */
-ordersRouter.get("/latest", async (req: Request, res: Response) => {
-    const to = req?.params?.to;
-
+ordersRouter.get("/custom/from/:from", async (req: Request, res: Response) => {
+    const from = req?.params?.from;
     try {
-
         const query = {
-            to: new Date().setHours(23, 59, 0, 0)
+            from: {
+                $gte: new Date(from),
+            }
         };
-        const order = (await collections.orders.findOne(query)) as any;
+        const orders = (await collections.orders.find(query).toArray()) as any;
 
-        if (order) {
-            res.status(200).send(order);
-        }
+        res.status(200).send(orders);
     } catch (error) {
-        res.status(404).send(`Unable to find matching document with latest data to: ${req.params.to}`);
+        res.status(500).send(error.message);
     }
 });
 
 /**
- * @api {post} order/ add order
+ * @api {post} orders/ add order
  * @apiName PostOrder
  * @apiGroup Order
  * 
  * @apiBody {String} title
- * @apiBody {String} productId
+ * @apiBody {String} product
+ * @apiBody {String} userId
  * 
- * @apiSuccess {String} order body successfully added
+ * @apiSuccess {String} orders body successfully added
  */
 // POST
 ordersRouter.post("/", async (req: Request, res: Response) => {
     try {
         const newOrder = req.body as any;
+        console.log(newOrder)
         const result = await collections.orders.insertOne(newOrder);
 
         result
@@ -132,16 +135,16 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {put} order/:id update order by id
+ * @api {put} orders/:id update order by id
  * @apiName UpdateOrder
  * @apiGroup Order
  * 
- * @apiParam {Number} id Order id
+ * @apiParam {String} id Order id
  * 
  * @apiBody {String} title
  * @apiBody {String} productId
  * 
- * @apiSuccess {String} order body successfully updated
+ * @apiSuccess {String} orders body successfully updated
  */
 // PUT
 ordersRouter.put("/:id", async (req: Request, res: Response) => {
@@ -163,13 +166,13 @@ ordersRouter.put("/:id", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {delete} order/:id delete order by id
+ * @api {delete} orders/:id delete order by id
  * @apiName DeleteOrder
  * @apiGroup Order
  * 
- * @apiParam {Number} id Order id
+ * @apiParam {String} id Order id
  * 
- * @apiSuccess {String} order body successfully updated
+ * @apiSuccess {String} orders body successfully deleted
  */
 // DELETE
 ordersRouter.delete("/:id", async (req: Request, res: Response) => {
@@ -193,22 +196,22 @@ ordersRouter.delete("/:id", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {delete} order/:to delete order by id
- * @apiName DeleteOrder
+ * @api {delete} orders/custom/:to delete order by date
+ * @apiName DeleteOrderById
  * @apiGroup Order
  * 
- * @apiParam {String} to Order to date
+ * @apiParam {String} to Order to title
  * 
- * @apiSuccess {String} order body successfully deleted
+ * @apiSuccess {String} orders body successfully deleted
  */
-ordersRouter.delete("/:to", async (req: Request, res: Response) => {
+ordersRouter.delete("/custom/:to", async (req: Request, res: Response) => {
     const to = req?.params?.to;
 
     try {
         const query = {
-            to: to
+            to: new Date(to)
         };
-        const result = await collections.orders.deleteMany(query);
+        const result = await collections.orders.deleteOne(query);
 
         if (result && result.deletedCount) {
             res.status(202).send(`Successfully removed orders till ${to}`);
