@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { addHeadersToResponse } from './server-helpers';
-import { pool } from './config/postgres';
+import { addHeadersToResponse } from '../server-helpers';
+import { pool } from '../config/postgres';
 
 /**
  * Get All Weather Records or a single weather record
@@ -10,6 +10,7 @@ import { pool } from './config/postgres';
  * 
  * @param req.params.id 
  * @returns an array of Items or a single Item
+ * 
  */
 export async function getWeatherRecord(req: Request, res: Response) {
   addHeadersToResponse(res);

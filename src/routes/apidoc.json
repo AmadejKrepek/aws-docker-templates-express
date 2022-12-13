@@ -1,0 +1,21 @@
+{
+    "name": "Car Order Documentation",
+    "version": "0.1.0",
+    "description": "Car Order Service API Endpoints",
+    "title": "Car Order API",
+    "sampleUrl": "/",
+    "header": {
+        "title": "Introduction",
+        "filename": "intro.md"
+    },
+    "footer": {
+        "title": "Copyright @ Student",
+        "filename": "footer.md"
+    },
+    "template": {
+        "withCompare": true,
+        "withGenerator": true,
+        "aloneDisplay": false
+    }
+}
+    
