@@ -9,9 +9,19 @@ const express = require("express");
 
 var resp = [] as any;
 
+const prod_hostname = {
+  accountService: 'http://accountservice:20'
+}
+
+const dev_hostname = {
+  accountService: 'http://studentdocker.informatika.uni-mb.si:12670'
+}
+
+const hostname = process.env.NODE_ENV == 'Production' ? prod_hostname : dev_hostname;
+
 export async function fetchAccountData() {
   try {
-    this.orders = await fetch("http://studentdocker.informatika.uni-mb.si:12670/api/getUsers").then(
+    this.orders = await fetch(`${hostname}/api/getUsers`).then(
       (response) => {
         resp = response.json();
       }
@@ -25,7 +35,7 @@ export async function fetchAccountData() {
 
 async function validate(data: any) {
   try {
-    return axios.post(`http://studentdocker.informatika.uni-mb.si:12670/api/validate`, data)
+    return axios.post(`${hostname}/api/validate`, data)
     .then(response => {
       return response.data
     })
@@ -43,17 +53,18 @@ export const ordersRouter = express.Router();
 ordersRouter.use(express.json());
 
 /**
- * @api {get} orders Get all orders
+ * @api {post} orders Get all orders
  * @apiName GetOrders
  * @apiGroup Order
+ * 
+ * @apiBody {String} title
  *
  * @apiSuccess {String} orders Array of Orders
  */
 // GET
-ordersRouter.get("/", async (req: Request, res: Response) => {
+ordersRouter.post("/", async (req: Request, res: Response) => {
   try {
     const token = req?.body?.token;
-    console.log(token)
     if (!token) {
       res.status(400);
       res.json({message: 'Please add token to request body!'})
