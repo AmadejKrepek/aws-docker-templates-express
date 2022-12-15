@@ -1,53 +1,28 @@
-import { Credentials } from '../Credentials';
-const { RabbitMQ } = require('../RabbitMq')
+import { getSettings, getUrl } from "../rabbit/Settings";
 // External Dependencies
 import { Request, Response } from "express";
 import { ObjectId, ReturnDocument } from "mongodb";
 import { collections } from "../config/mongodb";
 
-import axios from 'axios';
+import axios from "axios";
 
 const express = require("express");
 
+import logger = require("../logger/logger");
+
 var resp = [] as any;
 
-const prod_hostname = {
-  accountService: 'http://accountservice:20'
-}
-
-const dev_hostname = {
-  accountService: 'http://studentdocker.informatika.uni-mb.si:12670'
-}
-
-const hostname = process.env.NODE_ENV == 'Production' ? prod_hostname : dev_hostname;
-
-/*
-export async function fetchAccountData() {
-  try {
-    this.orders = await fetch(`${hostname}/api/getUsers`).then(
-      (response) => {
-        resp = response.json();
-      }
-    );
-  } catch (error) {
-    this.error = error;
-  } finally {
-    this.loading = false;
-  }
-}
-*/
+const s = getSettings();
 
 async function validate(data: any) {
   try {
-    return axios.post(`${hostname}/api/validate`, data)
-    .then(response => {
-      return response.data
-    })
+    return axios.post(`${s.hostname}/api/validate`, data).then((response) => {
+      return response.data;
+    });
   } catch (error) {
-    console.log(error)
-    return Promise.reject(error)
+    console.log(error);
+    return Promise.reject(error);
   } finally {
-
   }
 }
 
@@ -60,7 +35,7 @@ ordersRouter.use(express.json());
  * @api {post} orders Get all orders
  * @apiName GetOrders
  * @apiGroup Order
- * 
+ *
  * @apiBody {String} token
  *
  * @apiSuccess {String} orders Array of Orders
@@ -68,43 +43,45 @@ ordersRouter.use(express.json());
 // GET
 ordersRouter.post("/", async (req: Request, res: Response) => {
   try {
-    var rbmq = new RabbitMQ(creds.user, creds.pwd, creds.host, creds.port, creds.vhost, creds.amql_url);
-
-    let message = 'It works!'
-    let url = 'http://studentdocker.informatika.uni-mb.si:15555/orders'
-    let logType = "INFO"
-    let appName = '<OrdersService>'
-    console.log('ne dela')
-    var credentials = new Credentials()
-    var creds = credentials.getCredentials();
-    rbmq.produce(logType, url, appName, message).then(() => {
-      console.log('works')
-    })
+    logger.info("Getting all orders");
+    s.url = getUrl('orders')
     const token = req?.body?.token;
     if (!token) {
+      s.type = "ERROR";
+      s.msg = "No token in request body";
+      logger.error("Please add token to request body!");
       res.status(400);
-      res.json({message: 'Please add token to request body!'})
-      res.end()
-      return;
+      res.json({ message: "Please add token to request body!" });
+    } else {
+      const getValidation = async () => {
+        const result = await validate({ token: token });
+        if (result.error || result.message == "Token is invalid") {
+          s.type = "ERROR";
+          s.msg = "Token is invalid!";
+          logger.error("Token is invalid!");
+          res.status(400).send(result);
+        } else {
+          s.type = "INFO";
+          s.msg = "Successfully retrieved data!";
+          logger.info("Successfully retrieved data!");
+          const orders = (await collections.orders.find({}).toArray()) as any;
+          res.status(200).send(orders);
+        }
+      };
+      getValidation();
     }
-    /*
-    const getValidation = async () => {
-      const result = await validate({token: token})
-      if (result.error || result.message == 'Token is invalid') {
-        res.status(400).send(result)
-        res.end()
-        return;
-      }
-      else {
-        const orders = (await collections.orders.find({}).toArray()) as any;
-        res.status(200).send(orders);
-      }
-    }
-    getValidation()
-    */
   } catch (error) {
+    s.type = "ERROR";
+    s.msg = "Error " + error.message;
+    logger.error("Error " + error.message);
     res.status(500).send(error.message);
   }
+
+  s.rbmq.produce(s.type, s.url, s.name, s.msg).then(() => {
+    console.log("Producing...");
+  });
+
+  res.end();
 });
 
 /**
@@ -118,21 +95,37 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
  */
 ordersRouter.get("/:id", async (req: Request, res: Response) => {
   const id = req?.params?.id;
-
+  logger.info("Getting order by id");
+  s.url = getUrl(`order/${id}`)
   try {
     const query = { _id: new ObjectId(id) };
     const order = (await collections.orders.findOne(query)) as any;
 
     if (order) {
+      s.type = "INFO";
+      s.msg = "Successfully retrieved data!";
+      logger.info("Successfully retrieved data!");
       res.status(200).send(order);
     } else {
+      s.type = "ERROR";
+      s.msg = "Unable to find order with proper id";
+      logger.error("Unable to find order with proper id");
       res.status(404).send(`Unable to find order with id: ${req.params.id}`);
     }
   } catch (error) {
+    s.type = "ERROR";
+    s.msg = "Unable to find order with proper id";
+    logger.error("Unable to find order with proper id");
     res
       .status(404)
       .send(`Unable to find matching document with id: ${req.params.id}`);
   }
+
+  s.rbmq.produce(s.type, s.url, s.name, s.msg).then(() => {
+    console.log("Producing...");
+  });
+
+  res.end();
 });
 
 /**
@@ -146,20 +139,34 @@ ordersRouter.get("/:id", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders Array of orders
  */
 ordersRouter.get("/:from/:to", async (req: Request, res: Response) => {
+  logger.info("Getting order from to date");
+
   const from = req?.params?.from;
   const to = req?.params?.to;
 
+  s.url = getUrl(`order/${from}/${to}`)
   try {
     const query = {
       from: new Date(from),
       to: new Date(to),
     };
     const orders = (await collections.orders.find(query).toArray()) as any;
-
+    s.type = "INFO";
+    s.msg = "Successfully retrieved data!";
+    logger.info("Successfully retrieved data!");
     res.status(200).send(orders);
   } catch (error) {
+    s.type = "ERROR";
+    s.msg = "Error while getting orders from specific interval";
+    logger.error("Error while getting orders from specific interval");
     res.status(500).send(error.message);
   }
+
+  s.rbmq.produce(s.type, s.url, s.name, s.msg).then(() => {
+    console.log("Producing...");
+  });
+
+  res.end();
 });
 
 /**
