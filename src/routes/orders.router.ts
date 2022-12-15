@@ -1,3 +1,5 @@
+import { Credentials } from '../Credentials';
+const { RabbitMQ } = require('../RabbitMq')
 // External Dependencies
 import { Request, Response } from "express";
 import { ObjectId, ReturnDocument } from "mongodb";
@@ -19,6 +21,7 @@ const dev_hostname = {
 
 const hostname = process.env.NODE_ENV == 'Production' ? prod_hostname : dev_hostname;
 
+/*
 export async function fetchAccountData() {
   try {
     this.orders = await fetch(`${hostname}/api/getUsers`).then(
@@ -32,6 +35,7 @@ export async function fetchAccountData() {
     this.loading = false;
   }
 }
+*/
 
 async function validate(data: any) {
   try {
@@ -57,13 +61,25 @@ ordersRouter.use(express.json());
  * @apiName GetOrders
  * @apiGroup Order
  * 
- * @apiBody {String} title
+ * @apiBody {String} token
  *
  * @apiSuccess {String} orders Array of Orders
  */
 // GET
 ordersRouter.post("/", async (req: Request, res: Response) => {
   try {
+    var rbmq = new RabbitMQ(creds.user, creds.pwd, creds.host, creds.port, creds.vhost, creds.amql_url);
+
+    let message = 'It works!'
+    let url = 'http://studentdocker.informatika.uni-mb.si:15555/orders'
+    let logType = "INFO"
+    let appName = '<OrdersService>'
+    console.log('ne dela')
+    var credentials = new Credentials()
+    var creds = credentials.getCredentials();
+    rbmq.produce(logType, url, appName, message).then(() => {
+      console.log('works')
+    })
     const token = req?.body?.token;
     if (!token) {
       res.status(400);
@@ -71,6 +87,7 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
       res.end()
       return;
     }
+    /*
     const getValidation = async () => {
       const result = await validate({token: token})
       if (result.error || result.message == 'Token is invalid') {
@@ -84,7 +101,7 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
       }
     }
     getValidation()
-
+    */
   } catch (error) {
     res.status(500).send(error.message);
   }
