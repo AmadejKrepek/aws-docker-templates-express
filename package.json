@@ -10,7 +10,10 @@
     "dev": "concurrently \"npx tsc --watch\" \"nodemon -q built/server.js\""
   },
   "dependencies": {
+    "@types/amqplib": "^0.10.0",
     "@types/pg": "^8.6.1",
+    "amqp-ts": "^1.8.0",
+    "amqplib": "^0.10.3",
     "aws-sdk": "^2.822.0",
     "axios": "^1.2.1",
     "cors": "^2.8.5",
@@ -20,7 +23,7 @@
     "mysql2": "^2.3.3",
     "pg": "^8.7.1",
     "typescript": "^4.2.3",
-    "uuid": "^3.3.2"
+    "uuid": "^3.4.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.12",

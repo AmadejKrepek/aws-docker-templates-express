@@ -6,7 +6,8 @@
     "preserveConstEnums": true,
     "outDir": "./built",
     "sourceMap": true,
+    "allowJs": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/server.tsr.ts"],
   "exclude": ["node_modules", "**/*.spec.ts"]
 }
