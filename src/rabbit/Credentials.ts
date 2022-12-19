@@ -9,7 +9,7 @@ export class Credentials {
     getCredentials(): Credentials {
         const user = process.env.NODE_ENV == 'Production' ? 'student' : 'student';
         const pwd = process.env.NODE_ENV == 'Production' ? 'student123' : 'student123';
-        const host = process.env.NODE_ENV == 'Production' ? '172.17.0.77' : 'studentdocker.informatika.uni-mb.si';
+        const host = process.env.NODE_ENV == 'Production' ? 'rabbit' : 'studentdocker.informatika.uni-mb.si';
         const port = process.env.NODE_ENV == 'Production' ? '5672' : '5672';
 
         var creds = new Credentials();

@@ -15,8 +15,40 @@ export class RabbitMQ {
     }
 
     async produce(logType, url, appName, message){
+        let objectDate = new Date();
+
+        let day = objectDate.getDate();
+        let month = objectDate.getMonth() + 1;
+        let year = objectDate.getFullYear();
+
+        let hours = objectDate.getHours();
+        let minutes = objectDate.getMinutes();
+        let seconds = objectDate.getSeconds();
+
+        if (day < 10) {
+            day = '0' + day;
+        }
+        
+        if (month < 10) {
+            month = `0${month}`;
+        }
+
+        if (hours < 10) {
+            hours = `0${hours}`;
+        }
+
+        if (minutes < 10) {
+            minutes = `0${minutes}`;
+        }
+
+        if (seconds < 10) {
+            seconds = `0${seconds}`;
+        }
+
+        let dateFormat = year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+
         var logMessage = new LogMessage();
-        logMessage.timestamp = new Date().toISOString();
+        logMessage.timestamp = dateFormat;
         logMessage.logType = logType;
         logMessage.url = url;
         logMessage.correlationId = uuidv4();
@@ -37,7 +69,7 @@ export class RabbitMQ {
         await channel.assertQueue(queue, {durable: true});
         await channel.bindQueue(queue, exchange, rkey);
 
-        var msg = `${logMessage.timestamp} ${logMessage.logType} ${logMessage.url} Correlation: ${logMessage.correlationId} [${logMessage.applicationName}] - <* ${logMessage.message} *>`;
+        var msg = `"${logMessage.timestamp} ${logMessage.logType} ${logMessage.url} Correlation: ${logMessage.correlationId} [${logMessage.applicationName}] - <* ${logMessage.message} *>"`;
         await channel.publish(exchange, rkey, Buffer.from(msg));
         setTimeout(() => {
             channel.close();
