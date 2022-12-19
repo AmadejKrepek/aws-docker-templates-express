@@ -59,7 +59,7 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
           s.type = "ERROR";
           s.msg = "Token is invalid!";
           logger.error("Token is invalid!");
-          res.status(400).send(result);
+          res.status(500).send('Token is invalid!')
         } else {
           s.type = "INFO";
           s.msg = "Successfully retrieved data!";
@@ -80,8 +80,6 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
   s.rbmq.produce(s.type, s.url, s.name, s.msg).then(() => {
     console.log("Producing...");
   });
-
-  res.end();
 });
 
 /**
@@ -124,8 +122,6 @@ ordersRouter.get("/:id", async (req: Request, res: Response) => {
   s.rbmq.produce(s.type, s.url, s.name, s.msg).then(() => {
     console.log("Producing...");
   });
-
-  res.end();
 });
 
 /**
