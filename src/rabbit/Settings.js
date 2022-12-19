@@ -3,7 +3,7 @@ const { RabbitMQ } = require('../rabbit/RabbitMq')
 
 export function getSettings() {
   const prod_hostname = {
-    accountService: "http://accountservice:20",
+    accountService: "http://accountservice:8080",
   };
 
   const dev_hostname = {
