@@ -9,6 +9,7 @@ import axios from "axios";
 const express = require("express");
 
 import logger = require("../logger/logger");
+import { addTracker } from "../tracker/Tracker";
 
 var resp = [] as any;
 
@@ -16,8 +17,12 @@ const s = getSettings();
 
 async function validate(data: any) {
   try {
-    return axios.post(`${s.hostname}/api/validate`, data).then((response) => {
+    return axios.post(`${s.hostname}/api/validate`, data, { timeout: 10 })
+    .then((response) => {
       return response.data;
+    })
+    .catch(error => {
+      console.log(error.message)
     });
   } catch (error) {
     console.log(error);
@@ -43,8 +48,15 @@ ordersRouter.use(express.json());
 // GET
 ordersRouter.post("/", async (req: Request, res: Response) => {
   try {
+    const endpoint = {
+      endpoint: "/orders",
+      method: "POST",
+      name: "GetOrders",
+      timestamp: new Date(),
+    };
+    await addTracker(endpoint);
     logger.info("Getting all orders");
-    s.url = getUrl('orders')
+    s.url = getUrl("orders");
     const token = req?.body?.token;
     if (!token) {
       s.type = "ERROR";
@@ -55,17 +67,23 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
     } else {
       const getValidation = async () => {
         const result = await validate({ token: token });
-        if (result.error || result.message == "Token is invalid") {
-          s.type = "ERROR";
-          s.msg = "Token is invalid!";
-          logger.error("Token is invalid!");
-          res.status(500).send('Token is invalid!')
-        } else {
-          s.type = "INFO";
-          s.msg = "Successfully retrieved data!";
-          logger.info("Successfully retrieved data!");
-          const orders = (await collections.orders.find({}).toArray()) as any;
-          res.status(200).send(orders);
+        console.log(result)
+        if (result != undefined) {
+          if (result.error || result.message == "Token is invalid") {
+            s.type = "ERROR";
+            s.msg = "Token is invalid!";
+            logger.error("Token is invalid!");
+            res.status(500).send("Token is invalid!");
+          } else {
+            s.type = "INFO";
+            s.msg = "Successfully retrieved data!";
+            logger.info("Successfully retrieved data!");
+            const orders = (await collections.orders.find({}).toArray()) as any;
+            res.status(200).send(orders);
+          }
+        }
+        else {
+          res.status(500).send({error: 'Account Service Validation API not responding'})
         }
       };
       getValidation();
@@ -92,9 +110,16 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders Order by id
  */
 ordersRouter.get("/:id", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/id/",
+    method: "GET",
+    name: "GetOrdersById",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   const id = req?.params?.id;
   logger.info("Getting order by id");
-  s.url = getUrl(`order/${id}`)
+  s.url = getUrl(`order/${id}`);
   try {
     const query = { _id: new ObjectId(id) };
     const order = (await collections.orders.findOne(query)) as any;
@@ -135,12 +160,19 @@ ordersRouter.get("/:id", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders Array of orders
  */
 ordersRouter.get("/:from/:to", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/from/to",
+    method: "GET",
+    name: "GetOrdersWithDate",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   logger.info("Getting order from to date");
 
   const from = req?.params?.from;
   const to = req?.params?.to;
 
-  s.url = getUrl(`order/${from}/${to}`)
+  s.url = getUrl(`order/${from}/${to}`);
   try {
     const query = {
       from: new Date(from),
@@ -175,6 +207,13 @@ ordersRouter.get("/:from/:to", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders Array of orders
  */
 ordersRouter.get("/custom/from/:from", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/custom/from",
+    method: "GET",
+    name: "GetOrdersWithCustomDate",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   const from = req?.params?.from;
   try {
     const query = {
@@ -203,6 +242,13 @@ ordersRouter.get("/custom/from/:from", async (req: Request, res: Response) => {
  */
 // POST
 ordersRouter.post("/", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/",
+    method: "POST",
+    name: "PostOrder",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   try {
     const newOrder = req.body as any;
     console.log(newOrder);
@@ -233,6 +279,13 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
  */
 // PUT
 ordersRouter.put("/:id", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/id/",
+    method: "PUT",
+    name: "UpdateOrder",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   const id = req?.params?.id;
 
   try {
@@ -263,6 +316,13 @@ ordersRouter.put("/:id", async (req: Request, res: Response) => {
  */
 // DELETE
 ordersRouter.delete("/:id", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/id/",
+    method: "DELETE",
+    name: "DeleteOrder",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   const id = req?.params?.id;
 
   try {
@@ -292,6 +352,13 @@ ordersRouter.delete("/:id", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders body successfully deleted
  */
 ordersRouter.delete("/custom/:to", async (req: Request, res: Response) => {
+  const endpoint = {
+    endpoint: "/orders/custom/to",
+    method: "DELETE",
+    name: "DeleteOrderById",
+    timestamp: new Date(),
+  };
+  await addTracker(endpoint);
   const to = req?.params?.to;
 
   try {
