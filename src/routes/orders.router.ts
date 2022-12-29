@@ -17,13 +17,14 @@ const s = getSettings();
 
 async function validate(data: any) {
   try {
-    return axios.post(`${s.hostname}/api/validate`, data, { timeout: 10 })
-    .then((response) => {
-      return response.data;
-    })
-    .catch(error => {
-      console.log(error.message)
-    });
+    return axios
+      .post(`${s.hostname}/api/validate`, data, { timeout: 1000 })
+      .then((response) => {
+        return response.data;
+      })
+      .catch((error) => {
+        console.log(error.message);
+      });
   } catch (error) {
     console.log(error);
     return Promise.reject(error);
@@ -37,27 +38,28 @@ export const ordersRouter = express.Router();
 ordersRouter.use(express.json());
 
 /**
- * @api {post} orders Get all orders
+ * @api {get} orders Get all orders
  * @apiName GetOrders
  * @apiGroup Order
  *
- * @apiBody {String} token
+ * @apiParam {String} token
  *
  * @apiSuccess {String} orders Array of Orders
  */
 // GET
-ordersRouter.post("/", async (req: Request, res: Response) => {
+ordersRouter.get("/:token", async (req: Request, res: Response) => {
+  console.log("goes there");
   try {
     const endpoint = {
       endpoint: "/orders",
-      method: "POST",
+      method: "GET",
       name: "GetOrders",
       timestamp: new Date(),
     };
     await addTracker(endpoint);
     logger.info("Getting all orders");
     s.url = getUrl("orders");
-    const token = req?.body?.token;
+    const token = req?.params?.token;
     if (!token) {
       s.type = "ERROR";
       s.msg = "No token in request body";
@@ -65,28 +67,35 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
       res.status(400);
       res.json({ message: "Please add token to request body!" });
     } else {
-      const getValidation = async () => {
-        const result = await validate({ token: token });
-        console.log(result)
-        if (result != undefined) {
-          if (result.error || result.message == "Token is invalid") {
-            s.type = "ERROR";
-            s.msg = "Token is invalid!";
-            logger.error("Token is invalid!");
-            res.status(500).send("Token is invalid!");
-          } else {
-            s.type = "INFO";
-            s.msg = "Successfully retrieved data!";
-            logger.info("Successfully retrieved data!");
-            const orders = (await collections.orders.find({}).toArray()) as any;
-            res.status(200).send(orders);
+      var errorStatus = false;
+
+      await validate({ token: token })
+        .then((x) => {
+          console.log(x.message);
+          if (x.message == "Token is invalid") {
+            errorStatus = true;
           }
-        }
-        else {
-          res.status(500).send({error: 'Account Service Validation API not responding'})
-        }
-      };
-      getValidation();
+        })
+        .catch((error) => {
+          errorStatus = true;
+          console.error(error);
+        })
+        .finally(() => {
+          console.log("Validation finished");
+        });
+
+      if (errorStatus) {
+        s.type = "ERROR";
+        s.msg = "Token is invalid!";
+        logger.error("Token is invalid!");
+        res.status(500).send("Token is invalid!");
+      } else {
+        s.type = "INFO";
+        s.msg = "Successfully retrieved data!";
+        logger.info("Successfully retrieved data!");
+        const orders = (await collections.orders.find({}).toArray()) as any;
+        res.status(200).send(orders);
+      }
     }
   } catch (error) {
     s.type = "ERROR";
@@ -230,9 +239,11 @@ ordersRouter.get("/custom/from/:from", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {post} orders/ add order
+ * @api {post} orders/:token add order
  * @apiName PostOrder
  * @apiGroup Order
+ *
+ * @apiParam token jtw Token
  *
  * @apiBody {String} title
  * @apiBody {String} product
@@ -241,24 +252,48 @@ ordersRouter.get("/custom/from/:from", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders body successfully added
  */
 // POST
-ordersRouter.post("/", async (req: Request, res: Response) => {
+ordersRouter.post("/:token", async (req: Request, res: Response) => {
   const endpoint = {
-    endpoint: "/orders/",
+    endpoint: "/orders/:token",
     method: "POST",
     name: "PostOrder",
     timestamp: new Date(),
   };
   await addTracker(endpoint);
+  const token = req.params?.token;
   try {
-    const newOrder = req.body as any;
-    console.log(newOrder);
-    const result = await collections.orders.insertOne(newOrder);
+    var errorStatus = false;
 
-    result
-      ? res
-          .status(201)
-          .send(`Successfully created a new order with id ${result.insertedId}`)
-      : res.status(500).send("Failed to create a new order.");
+    await validate({ token: token })
+      .then((x) => {
+        console.log(x.message);
+        if (x.message == "Token is invalid") {
+          errorStatus = true;
+        }
+      })
+      .catch((error) => {
+        errorStatus = true;
+        console.error(error);
+      })
+      .finally(() => {
+        console.log("Validation finished");
+      });
+
+    if (!errorStatus) {
+      const newOrder = req.body as any;
+      console.log(newOrder);
+      const result = await collections.orders.insertOne(newOrder);
+
+      result
+        ? res
+            .status(201)
+            .send(
+              `Successfully created a new order with id ${result.insertedId}`
+            )
+        : res.status(500).send("Failed to create a new order.");
+    } else {
+      res.status(400).send("Token is invalid!");
+    }
   } catch (error) {
     console.error(error);
     res.status(400).send(error.message);
@@ -266,11 +301,12 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {put} orders/:id update order by id
+ * @api {put} orders/:id/:token update order by id
  * @apiName UpdateOrder
  * @apiGroup Order
  *
  * @apiParam {String} id Order id
+ * @apiParam {String} token Jwt Token
  *
  * @apiBody {String} title
  * @apiBody {String} productId
@@ -278,17 +314,35 @@ ordersRouter.post("/", async (req: Request, res: Response) => {
  * @apiSuccess {String} orders body successfully updated
  */
 // PUT
-ordersRouter.put("/:id", async (req: Request, res: Response) => {
+ordersRouter.put("/:id/:token", async (req: Request, res: Response) => {
   const endpoint = {
-    endpoint: "/orders/id/",
+    endpoint: "/orders/id/token",
     method: "PUT",
     name: "UpdateOrder",
     timestamp: new Date(),
   };
   await addTracker(endpoint);
   const id = req?.params?.id;
+  const token = req?.params?.token;
+  var errorStatus = false;
+
+  await validate({ token: token })
+    .then((x) => {
+      console.log(x.message);
+      if (x.message == "Token is invalid") {
+        errorStatus = true;
+      }
+    })
+    .catch((error) => {
+      errorStatus = true;
+      console.error(error);
+    })
+    .finally(() => {
+      console.log("Validation finished");
+    });
 
   try {
+    console.log(errorStatus);
     const updatedOrder: any = req.body as any;
     const query = { _id: new ObjectId(id) };
 
@@ -296,9 +350,13 @@ ordersRouter.put("/:id", async (req: Request, res: Response) => {
       $set: updatedOrder,
     });
 
-    result
-      ? res.status(200).send(`Successfully updated order with id ${id}`)
-      : res.status(304).send(`Order with id: ${id} not updated`);
+    if (!errorStatus) {
+      result
+        ? res.status(200).send(`Successfully updated order with id ${id}`)
+        : res.status(304).send(`Order with id: ${id} not updated`);
+    } else {
+      res.status(400).send("Token is invalid");
+    }
   } catch (error) {
     console.error(error.message);
     res.status(400).send(error.message);
@@ -306,35 +364,58 @@ ordersRouter.put("/:id", async (req: Request, res: Response) => {
 });
 
 /**
- * @api {delete} orders/:id delete order by id
+ * @api {delete} orders/:id/:token delete order by id
  * @apiName DeleteOrder
  * @apiGroup Order
  *
  * @apiParam {String} id Order id
+ * @apiParam {String} token Jwt Token
  *
  * @apiSuccess {String} orders body successfully deleted
  */
 // DELETE
-ordersRouter.delete("/:id", async (req: Request, res: Response) => {
+ordersRouter.delete("/:id/:token", async (req: Request, res: Response) => {
   const endpoint = {
-    endpoint: "/orders/id/",
+    endpoint: "/orders/id/token",
     method: "DELETE",
     name: "DeleteOrder",
     timestamp: new Date(),
   };
   await addTracker(endpoint);
   const id = req?.params?.id;
+  const token = req?.params?.token;
 
   try {
-    const query = { _id: new ObjectId(id) };
-    const result = await collections.orders.deleteOne(query);
+    var errorStatus = false;
 
-    if (result && result.deletedCount) {
-      res.status(202).send(`Successfully removed order with id ${id}`);
-    } else if (!result) {
-      res.status(400).send(`Failed to remove order with id ${id}`);
-    } else if (!result.deletedCount) {
-      res.status(404).send(`Order with id ${id} does not exist`);
+    await validate({ token: token })
+      .then((x) => {
+        console.log(x.message);
+        if (x.message == "Token is invalid") {
+          errorStatus = true;
+        }
+      })
+      .catch((error) => {
+        errorStatus = true;
+        console.error(error);
+      })
+      .finally(() => {
+        console.log("Validation finished");
+      });
+
+    if (!errorStatus) {
+      const query = { _id: new ObjectId(id) };
+      const result = await collections.orders.deleteOne(query);
+
+      if (result && result.deletedCount) {
+        res.status(202).send(`Successfully removed order with id ${id}`);
+      } else if (!result) {
+        res.status(400).send(`Failed to remove order with id ${id}`);
+      } else if (!result.deletedCount) {
+        res.status(404).send(`Order with id ${id} does not exist`);
+      }
+    } else {
+      res.status(400).send("Token is invalid");
     }
   } catch (error) {
     console.error(error.message);
