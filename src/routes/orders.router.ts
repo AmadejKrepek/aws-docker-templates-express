@@ -38,7 +38,7 @@ export const ordersRouter = express.Router();
 ordersRouter.use(express.json());
 
 /**
- * @api {get} orders Get all orders
+ * @api {get} orders/:token Get all orders
  * @apiName GetOrders
  * @apiGroup Order
  *
